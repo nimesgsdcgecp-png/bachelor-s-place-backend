@@ -65,7 +65,17 @@ func main() {
 
 	// Start background workers
 	workerCtx, workerCancel := context.WithCancel(context.Background())
-	embeddingWorker := embedding.NewWorker(pool)
+	
+	var embedder embedding.Provider
+	providerName := os.Getenv("EMBEDDING_PROVIDER")
+	switch providerName {
+	case "openai":
+		embedder = embedding.NewOpenAIProvider(os.Getenv("OPENAI_API_KEY"), os.Getenv("EMBEDDING_MODEL"))
+	default:
+		embedder = embedding.NewOllamaProvider(os.Getenv("OLLAMA_HOST"), os.Getenv("EMBEDDING_MODEL"))
+	}
+
+	embeddingWorker := embedding.NewWorker(pool, embedder)
 	embeddingWorker.Start(workerCtx)
 
 	// Configure the HTTP server with sensible timeouts

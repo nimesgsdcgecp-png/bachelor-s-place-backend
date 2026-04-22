@@ -1,12 +1,8 @@
 package embedding
 
 import (
-	"bytes"
 	"context"
-	"encoding/json"
 	"fmt"
-	"net/http"
-	"os"
 	"strings"
 	"time"
 
@@ -16,28 +12,19 @@ import (
 
 type Worker struct {
 	pool     *pgxpool.Pool
-	provider string
-	host     string
-	model    string
-	apiKey   string
+	provider Provider
 }
 
-func NewWorker(pool *pgxpool.Pool) *Worker {
+func NewWorker(pool *pgxpool.Pool, provider Provider) *Worker {
 	return &Worker{
 		pool:     pool,
-		provider: os.Getenv("EMBEDDING_PROVIDER"),
-		host:     os.Getenv("OLLAMA_HOST"),
-		model:    os.Getenv("EMBEDDING_MODEL"),
-		apiKey:   os.Getenv("OPENAI_API_KEY"),
+		provider: provider,
 	}
 }
 
 func (w *Worker) Start(ctx context.Context) {
 	go func() {
-		log.Info().
-			Str("provider", w.provider).
-			Str("model", w.model).
-			Msg("embedding worker started")
+		log.Info().Msg("embedding worker started")
 			
 		ticker := time.NewTicker(10 * time.Second)
 		defer ticker.Stop()
@@ -86,7 +73,7 @@ func (w *Worker) processPending(ctx context.Context) {
 			text = "lifestyle profile"
 		}
 
-		embedding, err := w.getEmbedding(ctx, text)
+		embedding, err := w.provider.Generate(ctx, text)
 		if err != nil {
 			log.Error().Err(err).Str("user_id", id).Msg("failed to get embedding")
 			continue
@@ -111,45 +98,4 @@ func (w *Worker) processPending(ctx context.Context) {
 			log.Info().Str("user_id", id).Msg("successfully updated personality embedding")
 		}
 	}
-}
-
-func (w *Worker) getEmbedding(ctx context.Context, text string) ([]float32, error) {
-	if w.provider == "ollama" {
-		return w.getOllamaEmbedding(ctx, text)
-	}
-	// Fallback/Placeholder for OpenAI
-	return nil, fmt.Errorf("unsupported or unconfigured provider: %s", w.provider)
-}
-
-func (w *Worker) getOllamaEmbedding(ctx context.Context, text string) ([]float32, error) {
-	url := fmt.Sprintf("%s/api/embeddings", w.host)
-	payload := map[string]string{
-		"model":  w.model,
-		"prompt": text,
-	}
-
-	body, _ := json.Marshal(payload)
-	req, err := http.NewRequestWithContext(ctx, "POST", url, bytes.NewBuffer(body))
-	if err != nil {
-		return nil, err
-	}
-
-	resp, err := http.DefaultClient.Do(req)
-	if err != nil {
-		return nil, err
-	}
-	defer resp.Body.Close()
-
-	if resp.StatusCode != http.StatusOK {
-		return nil, fmt.Errorf("ollama returned status %d", resp.StatusCode)
-	}
-
-	var result struct {
-		Embedding []float32 `json:"embedding"`
-	}
-	if err := json.NewDecoder(resp.Body).Decode(&result); err != nil {
-		return nil, err
-	}
-
-	return result.Embedding, nil
 }
