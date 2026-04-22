@@ -1,0 +1,17 @@
+version: '3.8'
+
+services:
+  db:
+    build:
+      context: .
+      dockerfile: Dockerfile.db
+    container_name: bachelorpad_db
+    ports:
+      - "5435:5432"
+    environment:
+      - POSTGRES_USER=postgres
+      - POSTGRES_PASSWORD=root
+      - POSTGRES_DB=namenotdecidedyet
+    volumes:
+      - ./db/schema_initializer.sql:/docker-entrypoint-initdb.d/init.sql
+    restart: always
