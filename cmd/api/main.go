@@ -61,7 +61,7 @@ func main() {
 	}
 
 	// Build the HTTP router (pool is passed to wire up repositories)
-	router := handler.NewRouter(pool, cfg.JWTSecret, encryptor)
+	router := handler.NewRouter(pool, cfg.JWTSecret, encryptor, cfg)
 
 	// Start background workers
 	workerCtx, workerCancel := context.WithCancel(context.Background())

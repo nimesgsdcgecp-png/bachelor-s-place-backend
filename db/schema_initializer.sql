@@ -123,6 +123,11 @@ CREATE TYPE payment_gateway AS ENUM (
     'stripe'
 );
 
+CREATE TYPE payment_model AS ENUM (
+    'leader_pays_all',
+    'split_evenly'
+);
+
 CREATE TYPE notification_type AS ENUM (
     'squad_invite',           -- Someone invited you to a squad
     'squad_invite_accepted',  -- A member accepted your squad invite
@@ -332,6 +337,7 @@ CREATE TABLE squads (
     room_id                 UUID            REFERENCES rooms(id),        -- NULL unless targeting specific PG room
     name                    TEXT,
     status                  squad_status    NOT NULL DEFAULT 'browsing',
+    payment_model           payment_model   NOT NULL DEFAULT 'leader_pays_all',
     max_size                INT             NOT NULL DEFAULT 5 CHECK (max_size >= 2 AND max_size <= 5),
     current_member_count    INT             NOT NULL DEFAULT 1 CHECK (current_member_count >= 1),
     created_by              UUID            NOT NULL REFERENCES users(id),

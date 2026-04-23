@@ -30,8 +30,13 @@ type Config struct {
 	OpenAIAPIKey string
 
 	// Razorpay (wired in Module 8)
-	RazorpayKeyID     string
-	RazorpayKeySecret string
+	RazorpayKeyID         string
+	RazorpayKeySecret     string
+	RazorpayWebhookSecret string
+
+	// Payments feature toggle — set to true in production only
+	// When false, all payment endpoints return SERVICE_UNAVAILABLE
+	PaymentsEnabled bool
 
 	// Email / SMTP (wired in Module 10)
 	SMTPHost  string
@@ -57,8 +62,10 @@ func Load() (*Config, error) {
 		EncryptionKey:     os.Getenv("ENCRYPTION_KEY"),
 		GoogleMapsAPIKey:  os.Getenv("GOOGLE_MAPS_API_KEY"),
 		OpenAIAPIKey:      os.Getenv("OPENAI_API_KEY"),
-		RazorpayKeyID:     os.Getenv("RAZORPAY_KEY_ID"),
-		RazorpayKeySecret: os.Getenv("RAZORPAY_KEY_SECRET"),
+		RazorpayKeyID:         os.Getenv("RAZORPAY_KEY_ID"),
+		RazorpayKeySecret:     os.Getenv("RAZORPAY_KEY_SECRET"),
+		RazorpayWebhookSecret: os.Getenv("RAZORPAY_WEBHOOK_SECRET"),
+		PaymentsEnabled:       os.Getenv("PAYMENTS_ENABLED") == "true",
 		SMTPHost:          os.Getenv("SMTP_HOST"),
 		SMTPPort:          smtpPort,
 		SMTPUser:          os.Getenv("SMTP_USER"),

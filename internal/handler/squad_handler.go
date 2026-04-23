@@ -94,9 +94,10 @@ func (h *SquadHandler) GetMatches(w http.ResponseWriter, r *http.Request) {
 func (h *SquadHandler) CreateSquad(w http.ResponseWriter, r *http.Request) {
 	userID := middleware.UserIDFromContext(r.Context())
 	var input struct {
-		Name       string  `json:"name" validate:"required,min=3"`
-		PropertyID *string `json:"property_id"`
-		RoomID     *string `json:"room_id"`
+		Name         string             `json:"name" validate:"required"`
+		PropertyID   *string            `json:"property_id"`
+		RoomID       *string            `json:"room_id"`
+		PaymentModel squad.PaymentModel `json:"payment_model"`
 	}
 
 	if err := json.NewDecoder(r.Body).Decode(&input); err != nil {
@@ -104,7 +105,7 @@ func (h *SquadHandler) CreateSquad(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	id, err := h.svc.CreateSquad(r.Context(), input.Name, userID, input.PropertyID, input.RoomID)
+	id, err := h.svc.CreateSquad(r.Context(), input.Name, userID, input.PropertyID, input.RoomID, input.PaymentModel)
 	if err != nil {
 		respond.Error(w, err)
 		return

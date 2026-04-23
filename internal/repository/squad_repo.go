@@ -105,13 +105,13 @@ func (r *SquadRepo) CreateSquad(ctx context.Context, s *squad.Squad, leaderID st
 	defer tx.Rollback(ctx)
 
 	const squadQuery = `
-		INSERT INTO squads (property_id, room_id, name, status, max_size, current_member_count, created_by)
-		VALUES ($1, $2, $3, $4, $5, 1, $6)
+		INSERT INTO squads (property_id, room_id, name, status, payment_model, max_size, current_member_count, created_by)
+		VALUES ($1, $2, $3, $4, $5, $6, 1, $7)
 		RETURNING id`
 
 	var squadID string
 	err = tx.QueryRow(ctx, squadQuery,
-		s.PropertyID, s.RoomID, s.Name, s.Status, s.MaxSize, s.CreatedBy,
+		s.PropertyID, s.RoomID, s.Name, s.Status, s.PaymentModel, s.MaxSize, s.CreatedBy,
 	).Scan(&squadID)
 	if err != nil {
 		return "", err
@@ -131,14 +131,14 @@ func (r *SquadRepo) CreateSquad(ctx context.Context, s *squad.Squad, leaderID st
 
 func (r *SquadRepo) GetSquadByID(ctx context.Context, id string) (*squad.Squad, error) {
 	const query = `
-		SELECT id, property_id, room_id, name, status, max_size, current_member_count, created_by, created_at, updated_at
+		SELECT id, property_id, room_id, name, status, payment_model, max_size, current_member_count, created_by, total_deposit_collected, token_paid_at, created_at, updated_at
 		FROM   squads
 		WHERE  id = $1 AND deleted_at IS NULL`
 
 	var s squad.Squad
 	err := r.pool.QueryRow(ctx, query, id).Scan(
-		&s.ID, &s.PropertyID, &s.RoomID, &s.Name, &s.Status, &s.MaxSize, &s.CurrentMemberCount,
-		&s.CreatedBy, &s.CreatedAt, &s.UpdatedAt,
+		&s.ID, &s.PropertyID, &s.RoomID, &s.Name, &s.Status, &s.PaymentModel, &s.MaxSize, &s.CurrentMemberCount,
+		&s.CreatedBy, &s.TotalDepositCollected, &s.TokenPaidAt, &s.CreatedAt, &s.UpdatedAt,
 	)
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
@@ -300,4 +300,40 @@ func (r *SquadRepo) ResolveProposal(ctx context.Context, proposalID string, stat
 	}
 
 	return tx.Commit(ctx)
+}
+func (r *SquadRepo) UpdateTotalDeposit(ctx context.Context, squadID string, amount float64) error {
+	const query = `UPDATE squads SET total_deposit_collected = total_deposit_collected + $1, updated_at = NOW() WHERE id = $2`
+	_, err := r.pool.Exec(ctx, query, amount, squadID)
+	return err
+}
+
+func (r *SquadRepo) SetStatusLocked(ctx context.Context, squadID string) error {
+	const query = `UPDATE squads SET status = 'locked', token_paid_at = NOW(), updated_at = NOW() WHERE id = $1`
+	_, err := r.pool.Exec(ctx, query, squadID)
+	return err
+}
+
+func (r *SquadRepo) SetStatusMovedIn(ctx context.Context, squadID string) error {
+	const query = `UPDATE squads SET status = 'moved_in', move_in_confirmed_at = NOW(), updated_at = NOW() WHERE id = $1`
+	_, err := r.pool.Exec(ctx, query, squadID)
+	return err
+}
+
+func (r *SquadRepo) GetLandlordContact(ctx context.Context, propertyID string) (map[string]string, error) {
+	const query = `
+		SELECT u.name, u.phone_encrypted
+		FROM   properties p
+		JOIN   users u ON p.owner_id = u.id
+		WHERE  p.id = $1`
+	
+	var name, phone string
+	err := r.pool.QueryRow(ctx, query, propertyID).Scan(&name, &phone)
+	if err != nil {
+		return nil, err
+	}
+
+	return map[string]string{
+		"name":  name,
+		"phone": phone,
+	}, nil
 }

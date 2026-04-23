@@ -42,20 +42,29 @@ const (
 	MemberRoleMember MemberRole = "member"
 )
 
+// Payment Model
+type PaymentModel string
+
+const (
+	PaymentModelLeaderPaysAll PaymentModel = "leader_pays_all"
+	PaymentModelSplitEvenly   PaymentModel = "split_evenly"
+)
+
 // Squad represents a group of 2-5 bachelors renting together.
 type Squad struct {
-	ID                   string     `json:"id"`
-	PropertyID           *string    `json:"property_id,omitempty"` // NULL when browsing
-	RoomID               *string    `json:"room_id,omitempty"`
-	Name                 string     `json:"name"`
-	Status               Status     `json:"status"`
-	MaxSize              int        `json:"max_size"`
-	CurrentMemberCount   int        `json:"current_member_count"`
-	CreatedBy            string     `json:"created_by"`
-	TotalDepositCollected float64    `json:"total_deposit_collected"`
-	TokenPaidAt          *time.Time `json:"token_paid_at,omitempty"`
-	CreatedAt            time.Time  `json:"created_at"`
-	UpdatedAt            time.Time  `json:"updated_at"`
+	ID                   string       `json:"id"`
+	PropertyID           *string      `json:"property_id,omitempty"` // NULL when browsing
+	RoomID               *string      `json:"room_id,omitempty"`
+	Name                 string       `json:"name"`
+	Status               Status       `json:"status"`
+	PaymentModel         PaymentModel `json:"payment_model"`
+	MaxSize              int          `json:"max_size"`
+	CurrentMemberCount   int          `json:"current_member_count"`
+	CreatedBy            string       `json:"created_by"`
+	TotalDepositCollected float64     `json:"total_deposit_collected"`
+	TokenPaidAt          *time.Time   `json:"token_paid_at,omitempty"`
+	CreatedAt            time.Time    `json:"created_at"`
+	UpdatedAt            time.Time    `json:"updated_at"`
 }
 
 // SquadMember represents a user's membership in a squad.
@@ -117,4 +126,8 @@ type Repository interface {
 	CreateProposal(ctx context.Context, squadID, userID, propertyID string, roomID *string) (string, error)
 	GetProposals(ctx context.Context, squadID string) ([]map[string]interface{}, error)
 	ResolveProposal(ctx context.Context, proposalID string, status string) error
+	GetLandlordContact(ctx context.Context, propertyID string) (map[string]string, error)
+	UpdateTotalDeposit(ctx context.Context, squadID string, amount float64) error
+	SetStatusLocked(ctx context.Context, squadID string) error
+	SetStatusMovedIn(ctx context.Context, squadID string) error
 }

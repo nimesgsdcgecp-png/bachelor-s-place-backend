@@ -46,14 +46,19 @@ func (s *Service) GetMatches(ctx context.Context, userID string, page, perPage i
 	return matches, nil
 }
 
-func (s *Service) CreateSquad(ctx context.Context, name string, leaderID string, propertyID, roomID *string) (string, error) {
+func (s *Service) CreateSquad(ctx context.Context, name string, leaderID string, propertyID, roomID *string, paymentModel PaymentModel) (string, error) {
+	if paymentModel == "" {
+		paymentModel = PaymentModelLeaderPaysAll
+	}
+
 	newSquad := &Squad{
-		Name:       name,
-		Status:     StatusBrowsing,
-		MaxSize:    5, // Default max size
-		CreatedBy:  leaderID,
-		PropertyID: propertyID,
-		RoomID:     roomID,
+		Name:         name,
+		Status:       StatusBrowsing,
+		PaymentModel: paymentModel,
+		MaxSize:      5,
+		CreatedBy:    leaderID,
+		PropertyID:   propertyID,
+		RoomID:       roomID,
 	}
 
 	if propertyID != nil {
@@ -181,9 +186,21 @@ func (s *Service) GetSquadDetails(ctx context.Context, userID, squadID string) (
 
 	proposals, _ := s.repo.GetProposals(ctx, squadID)
 
-	return map[string]interface{}{
+	response := map[string]interface{}{
 		"squad":     sq,
 		"members":   members,
 		"proposals": proposals,
-	}, nil
+	}
+
+	// BR-06: Reveal landlord phone only if locked or moved_in
+	if sq.Status == StatusLocked || sq.Status == StatusMovedIn {
+		if sq.PropertyID != nil {
+			contact, err := s.repo.GetLandlordContact(ctx, *sq.PropertyID)
+			if err == nil {
+				response["landlord_contact"] = contact
+			}
+		}
+	}
+
+	return response, nil
 }

@@ -158,3 +158,10 @@ func (r *PropertyRepo) UpdateStatus(ctx context.Context, id string, status strin
 	}
 	return nil
 }
+
+// SetPropertyOccupied marks a property as occupied when a squad confirms move-in.
+func (r *PropertyRepo) SetPropertyOccupied(ctx context.Context, propertyID string) error {
+	const query = `UPDATE properties SET status = 'occupied', updated_at = NOW() WHERE id = $1::UUID AND deleted_at IS NULL`
+	_, err := r.pool.Exec(ctx, query, propertyID)
+	return err
+}
